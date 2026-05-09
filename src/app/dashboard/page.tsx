@@ -17,6 +17,7 @@ import {
   isWithinInterval,
 } from 'date-fns'
 import AddEventModal from '@/components/AddEventModal'
+import { EVENT_CATEGORIES, detectEventCategory } from '@/lib/eventCategories'
 
 type Creator = { id: string; name: string; color: string }
 type Event = {
@@ -132,18 +133,23 @@ export default function CalendarPage() {
                     {format(day, 'd')}
                   </div>
                   <div className="space-y-0.5">
-                    {dayEvents.slice(0, 3).map((ev) => (
-                      <div
-                        key={ev.id}
-                        onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev) }}
-                        className="text-[10px] truncate rounded px-1 py-0.5 text-white font-medium cursor-pointer hover:opacity-90"
-                        style={{ backgroundColor: ev.color || ev.creator.color }}
-                      >
-                        {ev.title}
-                      </div>
-                    ))}
+                    {dayEvents.slice(0, 3).map((ev) => {
+                      const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
+                      const bg = ev.color || '#E5E7EB'
+                      const fg = cat?.textColor || '#374151'
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev) }}
+                          className="text-[10px] truncate rounded px-1 py-0.5 font-medium cursor-pointer hover:opacity-80 transition"
+                          style={{ backgroundColor: bg, color: fg }}
+                        >
+                          {ev.title}
+                        </div>
+                      )
+                    })}
                     {dayEvents.length > 3 && (
-                      <div className="text-[10px] text-gray-400 px-1">+{dayEvents.length - 3} more</div>
+                      <div className="text-[10px] text-gray-400 px-1">+{dayEvents.length - 3} עוד</div>
                     )}
                   </div>
                 </div>
@@ -155,26 +161,40 @@ export default function CalendarPage() {
 
       <div className="w-full lg:w-72 space-y-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Upcoming</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">בקרוב</h3>
           {upcomingEvents.length === 0 ? (
-            <p className="text-sm text-gray-400">No upcoming events</p>
+            <p className="text-sm text-gray-400">אין אירועים קרובים</p>
           ) : (
             <div className="space-y-2">
-              {upcomingEvents.map((ev) => (
-                <div
-                  key={ev.id}
-                  onClick={() => setSelectedEvent(ev)}
-                  className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1.5 transition"
-                >
-                  <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: ev.color || ev.creator.color }} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{ev.title}</p>
-                    <p className="text-xs text-gray-400">
-                      {format(parseISO(ev.startDate), ev.allDay ? 'MMM d' : 'MMM d, h:mm a')}
-                    </p>
+              {upcomingEvents.map((ev) => {
+                const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
+                    className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1.5 transition"
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 border"
+                      style={{ backgroundColor: ev.color || '#E5E7EB', borderColor: ev.color || '#D1D5DB' }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 truncate">{ev.title}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-xs text-gray-400">
+                          {format(parseISO(ev.startDate), ev.allDay ? 'd/M' : 'd/M, HH:mm')}
+                        </p>
+                        {cat && (
+                          <span className="text-[10px] px-1.5 py-0 rounded-full font-medium"
+                            style={{ backgroundColor: cat.color, color: cat.textColor }}>
+                            {cat.emoji} {cat.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -188,34 +208,70 @@ export default function CalendarPage() {
         />
       )}
 
-      {selectedEvent && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedEvent.color || selectedEvent.creator.color }} />
-                <h2 className="text-lg font-semibold text-gray-900">{selectedEvent.title}</h2>
+      {selectedEvent && (() => {
+        const cat = selectedEvent.color
+          ? EVENT_CATEGORIES.find(c => c.color === selectedEvent.color)
+          : detectEventCategory(selectedEvent.title)
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+              {/* Colored header strip */}
+              <div className="px-6 py-4" style={{ backgroundColor: cat?.color || '#E5E7EB' }}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-medium mb-1" style={{ color: cat?.textColor || '#374151' }}>
+                      {cat?.emoji} {cat?.label || 'כללי'}
+                    </p>
+                    <h2 className="text-lg font-bold" style={{ color: cat?.textColor || '#374151' }} dir="auto">
+                      {selectedEvent.title}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="text-xl leading-none opacity-60 hover:opacity-100 transition"
+                    style={{ color: cat?.textColor || '#374151' }}
+                  >×</button>
+                </div>
               </div>
-              <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+
+              <div className="p-6">
+                {selectedEvent.description && (
+                  <p className="text-sm text-gray-600 mb-4" dir="auto">{selectedEvent.description}</p>
+                )}
+                <div className="space-y-2 text-sm text-gray-500 mb-5">
+                  <div className="flex gap-2">
+                    <span className="w-14 text-gray-400 flex-shrink-0">התחלה</span>
+                    <span>{format(parseISO(selectedEvent.startDate), selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-14 text-gray-400 flex-shrink-0">סיום</span>
+                    <span>{format(parseISO(selectedEvent.endDate), selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm')}</span>
+                  </div>
+                  {selectedEvent.recurring && (
+                    <div className="flex gap-2">
+                      <span className="w-14 text-gray-400 flex-shrink-0">חזרה</span>
+                      <span>{{ daily: 'כל יום', weekly: 'כל שבוע', monthly: 'כל חודש' }[selectedEvent.recurring] || selectedEvent.recurring}</span>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <span className="w-14 text-gray-400 flex-shrink-0">נוצר על ידי</span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: selectedEvent.creator.color }} />
+                      {selectedEvent.creator.name}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => deleteEvent(selectedEvent.id)}
+                  className="w-full border border-red-200 text-red-500 hover:bg-red-50 rounded-lg py-2 text-sm font-medium transition"
+                >
+                  מחק אירוע
+                </button>
+              </div>
             </div>
-            {selectedEvent.description && (
-              <p className="text-sm text-gray-600 mb-3">{selectedEvent.description}</p>
-            )}
-            <div className="space-y-1 text-sm text-gray-500 mb-4">
-              <p>Start: {format(parseISO(selectedEvent.startDate), selectedEvent.allDay ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a')}</p>
-              <p>End: {format(parseISO(selectedEvent.endDate), selectedEvent.allDay ? 'MMM d, yyyy' : 'MMM d, yyyy h:mm a')}</p>
-              {selectedEvent.recurring && <p>Repeats: {selectedEvent.recurring}</p>}
-              <p>Created by: {selectedEvent.creator.name}</p>
-            </div>
-            <button
-              onClick={() => deleteEvent(selectedEvent.id)}
-              className="w-full border border-red-200 text-red-600 hover:bg-red-50 rounded-lg py-2 text-sm font-medium transition"
-            >
-              Delete event
-            </button>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
