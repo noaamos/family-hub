@@ -15,6 +15,7 @@ export const EVENT_CATEGORIES: EventCategory[] = [
   { id: 'health',   label: 'בריאות ורפואה', emoji: '🏥', color: '#FEF08A', textColor: '#713F12' },
   { id: 'travel',   label: 'טיולים ונסיעות',emoji: '✈️', color: '#E0F2FE', textColor: '#164E63' },
   { id: 'holiday',  label: 'חגים ושבת',     emoji: '✡️', color: '#FCE7F3', textColor: '#9D174D' },
+  { id: 'pet',      label: 'איבי 🐾',        emoji: '🐶', color: '#FED7AA', textColor: '#7C2D12' },
   { id: 'other',    label: 'כללי',           emoji: '📅', color: '#E5E7EB', textColor: '#374151' },
 ]
 
@@ -69,6 +70,11 @@ const KEYWORD_MAP: Record<string, string[]> = {
     'חו"ל', 'פריז', 'לונדון', 'ניו יורק', 'ברצלונה', 'רומא', 'אמסטרדם',
     'גרמניה', 'איטליה', 'יוון', 'תאילנד', 'הודו', 'יפן', 'ארה"ב',
     'trip', 'flight', 'vacation', 'hotel', 'travel', 'abroad',
+  ],
+  pet: [
+    'איבי', 'כלב', 'וטרינר', 'טיפוח', 'גרומינג', 'חיסון כלב', 'פינת חי',
+    'הליכת כלב', 'אימון כלב', 'טיסה עם כלב', 'פנסיון כלבים', 'כלבייה',
+    'dog', 'vet', 'grooming', 'walk dog', 'dog training', 'aivy', 'ivy',
   ],
   holiday: [
     'שבת', 'שבת קודש', 'ראש השנה', 'יום כיפור', 'סוכות', 'שמחת תורה',
