@@ -33,7 +33,7 @@ const HE_DAYS   = ['ראשון','שני','שלישי','רביעי','חמישי',
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<Event[]>([])
-  const [dayView, setDayView] = useState<Date | null>(null)
+  const [dayView, setDayView] = useState<Date | null>(new Date())
   const [showModal, setShowModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -142,8 +142,8 @@ export default function CalendarPage() {
           {/* Header */}
           <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ backgroundColor: col.header }}>
             <button onClick={() => setDayView(null)}
-              className="text-sm font-bold flex items-center gap-1 hover:opacity-70 transition" style={{ color: col.text }}>
-              ← חזרה
+              className="text-xs font-bold flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/50 hover:bg-white/80 transition" style={{ color: col.text }}>
+              🗓 חודשי
             </button>
             <div className="text-center flex-1">
               <p className="text-xs font-semibold opacity-60" style={{ color: col.text }}>יום {HE_DAYS[dayView.getDay()]}</p>
@@ -280,7 +280,7 @@ export default function CalendarPage() {
               return (
                 <div key={day.toISOString()}
                   onClick={() => setDayView(day)}
-                  className={`min-h-[56px] sm:min-h-[100px] p-1 sm:p-1.5 border-b border-gray-100 cursor-pointer transition-colors relative ${
+                  className={`min-h-[72px] sm:min-h-[100px] p-1 sm:p-1.5 border-b border-gray-100 cursor-pointer transition-colors relative ${
                     !inMonth ? 'opacity-25' : ''
                   }`}
                   style={{ backgroundColor: inMonth ? col.bg + '55' : undefined }}>
@@ -293,31 +293,21 @@ export default function CalendarPage() {
                     {format(day, 'd')}
                   </div>
 
-                  {/* Mobile: dots */}
-                  {dayEvents.length > 0 && (
-                    <div className="flex flex-wrap gap-0.5 sm:hidden">
-                      {dayEvents.slice(0, 3).map(ev => (
-                        <div key={ev.id} className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: ev.color || col.header }} />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Desktop: event chips */}
-                  <div className="hidden sm:block space-y-0.5">
-                    {dayEvents.slice(0, 3).map(ev => {
+                  {/* Event chips — shown on all screen sizes */}
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, 2).map(ev => {
                       const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
                       return (
                         <div key={ev.id}
                           onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
-                          className="text-xs leading-snug px-1.5 py-0.5 rounded font-bold truncate cursor-pointer hover:opacity-80 transition"
+                          className="text-[9px] sm:text-xs leading-snug px-1 sm:px-1.5 py-0.5 rounded font-bold truncate cursor-pointer hover:opacity-80 transition"
                           style={{ backgroundColor: ev.color || col.header, color: cat?.textColor || col.text, fontFamily: 'var(--font-amatic)' }}>
                           {cat?.emoji} {ev.title}
                         </div>
                       )
                     })}
-                    {dayEvents.length > 3 && (
-                      <p className="text-[9px] font-bold pl-1" style={{ color: col.text }}>+{dayEvents.length - 3} עוד</p>
+                    {dayEvents.length > 2 && (
+                      <p className="text-[8px] sm:text-[9px] font-bold pl-0.5" style={{ color: col.text }}>+{dayEvents.length - 2}</p>
                     )}
                   </div>
                 </div>
