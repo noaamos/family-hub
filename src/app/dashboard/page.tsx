@@ -86,7 +86,7 @@ export default function CalendarPage() {
               <p className="text-xs font-bold opacity-70 mb-0.5" style={{ color: cat?.textColor || '#374151' }}>
                 {cat?.emoji} {cat?.label}
               </p>
-              <h2 className="text-lg font-extrabold" style={{ color: cat?.textColor || '#111827', fontFamily: 'var(--font-heebo)' }} dir="auto">
+              <h2 className="text-2xl font-bold" style={{ color: cat?.textColor || '#111827', fontFamily: 'var(--font-amatic)' }} dir="auto">
                 {selectedEvent.title}
               </h2>
             </div>
@@ -185,7 +185,7 @@ export default function CalendarPage() {
                       style={{ borderColor: (ev.color || '#E5E7EB') + '99', backgroundColor: (ev.color || '#F9FAFB') + '33' }}>
                       <div className="text-xl flex-shrink-0">{cat?.emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm" dir="auto">{ev.title}</p>
+                        <p className="font-bold text-gray-900 text-lg leading-tight" dir="auto" style={{ fontFamily: 'var(--font-amatic)' }}>{ev.title}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {ev.allDay ? 'כל היום' : `${format(parseISO(ev.startDate),'HH:mm')} – ${format(parseISO(ev.endDate),'HH:mm')}`}
                         </p>
@@ -310,8 +310,8 @@ export default function CalendarPage() {
                       return (
                         <div key={ev.id}
                           onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
-                          className="text-[10px] leading-snug px-1.5 py-0.5 rounded font-semibold truncate cursor-pointer hover:opacity-80 transition"
-                          style={{ backgroundColor: ev.color || col.header, color: cat?.textColor || col.text }}>
+                          className="text-xs leading-snug px-1.5 py-0.5 rounded font-bold truncate cursor-pointer hover:opacity-80 transition"
+                          style={{ backgroundColor: ev.color || col.header, color: cat?.textColor || col.text, fontFamily: 'var(--font-amatic)' }}>
                           {cat?.emoji} {ev.title}
                         </div>
                       )
@@ -346,7 +346,7 @@ export default function CalendarPage() {
                       <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
                         style={{ backgroundColor: ev.color || '#9CA3AF' }} />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate" dir="auto">{ev.title}</p>
+                        <p className="text-base font-bold text-gray-800 truncate" dir="auto" style={{ fontFamily: 'var(--font-amatic)' }}>{ev.title}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {cat?.emoji} {format(parseISO(ev.startDate), ev.allDay ? 'd/M' : 'd/M, HH:mm')}
                         </p>
