@@ -12,6 +12,7 @@ export default function Navbar({ userName, userColor }: Props) {
   const links = [
     { href: '/dashboard', label: 'Calendar' },
     { href: '/dashboard/chores', label: 'Chores' },
+    { href: '/dashboard/groceries', label: '🛒 Groceries' },
     { href: '/dashboard/members', label: 'Members' },
   ]
 

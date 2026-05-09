@@ -15,9 +15,10 @@ model User {
   role      String   @default("member")
   createdAt DateTime @default(now())
 
-  createdEvents  Event[] @relation("EventCreator")
-  assignedChores Chore[] @relation("ChoreAssignee")
-  createdChores  Chore[] @relation("ChoreCreator")
+  createdEvents   Event[]       @relation("EventCreator")
+  assignedChores  Chore[]       @relation("ChoreAssignee")
+  createdChores   Chore[]       @relation("ChoreCreator")
+  groceryItems    GroceryItem[]
 }
 
 model Event {
@@ -50,3 +51,17 @@ model Chore {
   creator    User    @relation("ChoreCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId  String
 }
+
+model GroceryItem {
+  id        String    @id @default(cuid())
+  name      String
+  category  String
+  quantity  String?
+  checked   Boolean   @default(false)
+  checkedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  creator   User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId String
+}
+
