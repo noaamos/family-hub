@@ -38,6 +38,7 @@ export default function CalendarPage() {
   const [showModal, setShowModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
 
   const fetchEvents = useCallback(async () => {
     const res = await fetch('/api/events')
@@ -208,6 +209,14 @@ export default function CalendarPage() {
         />
       )}
 
+      {editingEvent && (
+        <AddEventModal
+          editEvent={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onCreated={fetchEvents}
+        />
+      )}
+
       {selectedEvent && (() => {
         const cat = selectedEvent.color
           ? EVENT_CATEGORIES.find(c => c.color === selectedEvent.color)
@@ -261,12 +270,20 @@ export default function CalendarPage() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteEvent(selectedEvent.id)}
-                  className="w-full border border-red-200 text-red-500 hover:bg-red-50 rounded-lg py-2 text-sm font-medium transition"
-                >
-                  מחק אירוע
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setEditingEvent(selectedEvent); setSelectedEvent(null) }}
+                    className="flex-1 border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-lg py-2 text-sm font-medium transition"
+                  >
+                    ערוך
+                  </button>
+                  <button
+                    onClick={() => deleteEvent(selectedEvent.id)}
+                    className="flex-1 border border-red-200 text-red-500 hover:bg-red-50 rounded-lg py-2 text-sm font-medium transition"
+                  >
+                    מחק
+                  </button>
+                </div>
               </div>
             </div>
           </div>

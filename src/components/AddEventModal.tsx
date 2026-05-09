@@ -4,21 +4,42 @@ import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { EVENT_CATEGORIES, detectEventCategory } from '@/lib/eventCategories'
 
+type EventForEdit = {
+  id: string
+  title: string
+  description?: string
+  startDate: string
+  endDate: string
+  allDay: boolean
+  recurring?: string
+  color?: string
+}
+
 type Props = {
   defaultDate?: Date
+  editEvent?: EventForEdit
   onClose: () => void
   onCreated: () => void
 }
 
-export default function AddEventModal({ defaultDate, onClose, onCreated }: Props) {
+export default function AddEventModal({ defaultDate, editEvent, onClose, onCreated }: Props) {
   const today = defaultDate ? format(defaultDate, "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm")
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [startDate, setStartDate] = useState(today)
-  const [endDate, setEndDate] = useState(today)
-  const [allDay, setAllDay] = useState(false)
-  const [recurring, setRecurring] = useState('')
-  const [manualCategoryId, setManualCategoryId] = useState<string | null>(null)
+
+  const initialCategory = editEvent?.color
+    ? (EVENT_CATEGORIES.find(c => c.color === editEvent.color)?.id ?? null)
+    : null
+
+  const [title, setTitle] = useState(editEvent?.title ?? '')
+  const [description, setDescription] = useState(editEvent?.description ?? '')
+  const [startDate, setStartDate] = useState(
+    editEvent ? editEvent.startDate.slice(0, 16) : today
+  )
+  const [endDate, setEndDate] = useState(
+    editEvent ? editEvent.endDate.slice(0, 16) : today
+  )
+  const [allDay, setAllDay] = useState(editEvent?.allDay ?? false)
+  const [recurring, setRecurring] = useState(editEvent?.recurring ?? '')
+  const [manualCategoryId, setManualCategoryId] = useState<string | null>(initialCategory)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -36,8 +57,10 @@ export default function AddEventModal({ defaultDate, onClose, onCreated }: Props
     setError('')
     setLoading(true)
     const color = activeCategory?.color ?? '#E5E7EB'
-    const res = await fetch('/api/events', {
-      method: 'POST',
+    const url = editEvent ? `/api/events/${editEvent.id}` : '/api/events'
+    const method = editEvent ? 'PATCH' : 'POST'
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title,
@@ -55,7 +78,7 @@ export default function AddEventModal({ defaultDate, onClose, onCreated }: Props
       onClose()
     } else {
       const data = await res.json()
-      setError(data.error || 'Failed to create event')
+      setError(data.error || (editEvent ? 'Failed to update event' : 'Failed to create event'))
     }
   }
 
@@ -63,7 +86,7 @@ export default function AddEventModal({ defaultDate, onClose, onCreated }: Props
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">הוסף אירוע</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{editEvent ? 'ערוך אירוע' : 'הוסף אירוע'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
@@ -199,7 +222,7 @@ export default function AddEventModal({ defaultDate, onClose, onCreated }: Props
               className="flex-1 text-white rounded-lg py-2 text-sm font-medium transition disabled:opacity-60"
               style={{ backgroundColor: activeCategory?.color ? activeCategory.color : '#6366F1', color: activeCategory?.textColor ?? 'white' }}
             >
-              {loading ? 'שומר...' : 'הוסף אירוע'}
+              {loading ? 'שומר...' : editEvent ? 'שמור שינויים' : 'הוסף אירוע'}
             </button>
           </div>
         </form>
