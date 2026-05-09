@@ -2,54 +2,33 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  addMonths,
-  subMonths,
-  addDays,
-  subDays,
-  startOfWeek,
-  endOfWeek,
-  isToday,
-  parseISO,
-  isWithinInterval,
+  format, startOfMonth, endOfMonth, eachDayOfInterval,
+  isSameMonth, isSameDay, addMonths, subMonths, addDays, subDays,
+  startOfWeek, endOfWeek, isToday, parseISO, isWithinInterval,
 } from 'date-fns'
 import AddEventModal from '@/components/AddEventModal'
 import { EVENT_CATEGORIES, detectEventCategory } from '@/lib/eventCategories'
 
 type Creator = { id: string; name: string; color: string }
 type Event = {
-  id: string
-  title: string
-  description?: string
-  startDate: string
-  endDate: string
-  allDay: boolean
-  recurring?: string
-  color?: string
-  creator: Creator
+  id: string; title: string; description?: string
+  startDate: string; endDate: string; allDay: boolean
+  recurring?: string; color?: string; creator: Creator
 }
 
-const DAY_HEADERS = [
-  { label: 'א׳', color: 'text-rose-400' },
-  { label: 'ב׳', color: 'text-orange-400' },
-  { label: 'ג׳', color: 'text-amber-500' },
-  { label: 'ד׳', color: 'text-emerald-500' },
-  { label: 'ה׳', color: 'text-teal-500' },
-  { label: 'ו׳', color: 'text-blue-400' },
-  { label: 'ש׳', color: 'text-violet-500' },
+// ── Planner colour palette — one per weekday (Sun→Sat) ──────────────────
+const COL = [
+  { bg: '#FFE4E8', header: '#FFB3C1', text: '#9F1239', label: 'א׳' },
+  { bg: '#FEF3C7', header: '#FDE68A', text: '#92400E', label: 'ב׳' },
+  { bg: '#ECFDF5', header: '#A7F3D0', text: '#065F46', label: 'ג׳' },
+  { bg: '#EFF6FF', header: '#BFDBFE', text: '#1E40AF', label: 'ד׳' },
+  { bg: '#F5F3FF', header: '#DDD6FE', text: '#5B21B6', label: 'ה׳' },
+  { bg: '#FFF7ED', header: '#FED7AA', text: '#9A3412', label: 'ו׳' },
+  { bg: '#FDF4FF', header: '#F0ABFC', text: '#86198F', label: 'ש׳' },
 ]
 
-const HE_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
-const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
-
-function heDate(d: Date) {
-  return `${HE_DAYS[d.getDay()]}, ${d.getDate()} ב${HE_MONTHS[d.getMonth()]}`
-}
+const HE_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+const HE_DAYS   = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת']
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -64,20 +43,18 @@ export default function CalendarPage() {
     const res = await fetch('/api/events')
     if (res.ok) setEvents(await res.json())
   }, [])
-
   useEffect(() => { fetchEvents() }, [fetchEvents])
 
   const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calStart = startOfWeek(monthStart, { weekStartsOn: 0 })
-  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
-  const days = eachDayOfInterval({ start: calStart, end: calEnd })
+  const days = eachDayOfInterval({
+    start: startOfWeek(monthStart, { weekStartsOn: 0 }),
+    end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 }),
+  })
 
   function eventsForDay(day: Date) {
-    return events.filter((e) => {
-      const start = parseISO(e.startDate)
-      const end = parseISO(e.endDate)
-      return isWithinInterval(day, { start, end }) || isSameDay(day, start)
+    return events.filter(e => {
+      const s = parseISO(e.startDate), en = parseISO(e.endDate)
+      return isWithinInterval(day, { start: s, end: en }) || isSameDay(day, s)
     }).sort((a, b) => {
       if (a.allDay && !b.allDay) return -1
       if (!a.allDay && b.allDay) return 1
@@ -91,72 +68,61 @@ export default function CalendarPage() {
     fetchEvents()
   }
 
-  const upcomingEvents = events
-    .filter((e) => parseISO(e.startDate) >= new Date())
-    .slice(0, 5)
+  const upcomingEvents = events.filter(e => parseISO(e.startDate) >= new Date()).slice(0, 5)
 
-  // ── Event detail popup (shared between views) ──────────────────────────
-  const eventDetailPopup = selectedEvent && (() => {
+  // ── Shared event detail popup ──────────────────────────────────────────
+  const eventDetail = selectedEvent && (() => {
     const cat = selectedEvent.color
       ? EVENT_CATEGORIES.find(c => c.color === selectedEvent.color)
       : detectEventCategory(selectedEvent.title)
     return (
-      <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        onClick={() => setSelectedEvent(null)}
-      >
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-sm" onClick={e => e.stopPropagation()}>
-          <div className="px-6 py-4" style={{ backgroundColor: cat?.color || '#E5E7EB' }}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold mb-1 opacity-80" style={{ color: cat?.textColor || '#374151' }}>
-                  {cat?.emoji} {cat?.label || 'כללי'}
-                </p>
-                <h2 className="text-lg font-extrabold leading-snug" style={{ color: cat?.textColor || '#374151' }} dir="auto">
-                  {selectedEvent.title}
-                </h2>
-              </div>
-              <button onClick={() => setSelectedEvent(null)} className="text-xl leading-none opacity-50 hover:opacity-100 transition" style={{ color: cat?.textColor || '#374151' }}>×</button>
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={() => setSelectedEvent(null)}>
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm border border-gray-100"
+          onClick={e => e.stopPropagation()}>
+          <div className="px-5 py-4 flex items-center justify-between"
+            style={{ backgroundColor: cat?.color || '#F3F4F6' }}>
+            <div>
+              <p className="text-xs font-bold opacity-70 mb-0.5" style={{ color: cat?.textColor || '#374151' }}>
+                {cat?.emoji} {cat?.label}
+              </p>
+              <h2 className="text-lg font-extrabold" style={{ color: cat?.textColor || '#111827', fontFamily: 'var(--font-heebo)' }} dir="auto">
+                {selectedEvent.title}
+              </h2>
             </div>
+            <button onClick={() => setSelectedEvent(null)} className="text-2xl opacity-40 hover:opacity-80 transition leading-none"
+              style={{ color: cat?.textColor }}>×</button>
           </div>
-          <div className="p-6">
+          <div className="p-5">
             {selectedEvent.description && (
-              <p className="text-sm text-gray-600 mb-4" dir="auto">{selectedEvent.description}</p>
+              <p className="text-sm text-gray-500 mb-4 pb-4 border-b border-gray-100" dir="auto">{selectedEvent.description}</p>
             )}
-            <div className="space-y-2 text-sm mb-5">
-              <div className="flex gap-2 items-center">
-                <span className="text-rose-400">📅</span>
-                <span className="text-gray-400 text-xs w-10">התחלה</span>
-                <span className="font-medium text-gray-700">{format(parseISO(selectedEvent.startDate), selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm')}</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <span className="text-violet-400">🏁</span>
-                <span className="text-gray-400 text-xs w-10">סיום</span>
-                <span className="font-medium text-gray-700">{format(parseISO(selectedEvent.endDate), selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm')}</span>
-              </div>
-              {selectedEvent.recurring && (
-                <div className="flex gap-2 items-center">
-                  <span className="text-amber-400">🔁</span>
-                  <span className="text-gray-400 text-xs w-10">חזרה</span>
-                  <span className="font-medium text-gray-700">{{ daily: 'כל יום', weekly: 'כל שבוע', monthly: 'כל חודש' }[selectedEvent.recurring] || selectedEvent.recurring}</span>
+            <div className="space-y-2.5 mb-5">
+              {[
+                { icon: '📅', label: 'התחלה', val: format(parseISO(selectedEvent.startDate), selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm') },
+                { icon: '🏁', label: 'סיום',  val: format(parseISO(selectedEvent.endDate),   selectedEvent.allDay ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm') },
+                ...(selectedEvent.recurring ? [{ icon: '🔁', label: 'חזרה', val: ({ daily:'כל יום', weekly:'כל שבוע', monthly:'כל חודש' } as Record<string,string>)[selectedEvent.recurring] || selectedEvent.recurring }] : []),
+              ].map(r => (
+                <div key={r.label} className="flex items-center gap-2 text-sm">
+                  <span>{r.icon}</span>
+                  <span className="text-gray-400 w-12 text-xs">{r.label}</span>
+                  <span className="text-gray-700 font-medium">{r.val}</span>
                 </div>
-              )}
-              <div className="flex gap-2 items-center">
-                <span className="text-blue-400">👤</span>
-                <span className="text-gray-400 text-xs w-10">נוצר</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded-full inline-block" style={{ backgroundColor: selectedEvent.creator.color }} />
-                  <span className="font-medium text-gray-700">{selectedEvent.creator.name}</span>
-                </span>
+              ))}
+              <div className="flex items-center gap-2 text-sm">
+                <span>👤</span>
+                <span className="text-gray-400 w-12 text-xs">נוצר</span>
+                <span className="w-3.5 h-3.5 rounded-full inline-block" style={{ backgroundColor: selectedEvent.creator.color }} />
+                <span className="text-gray-700 font-medium">{selectedEvent.creator.name}</span>
               </div>
             </div>
             <div className="flex gap-2">
               <button onClick={() => { setEditingEvent(selectedEvent); setSelectedEvent(null) }}
-                className="flex-1 border border-violet-200 text-violet-600 hover:bg-violet-50 rounded-2xl py-2 text-sm font-semibold transition">
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
                 ✏️ ערוך
               </button>
               <button onClick={() => deleteEvent(selectedEvent.id)}
-                className="flex-1 border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-2xl py-2 text-sm font-semibold transition">
+                className="flex-1 py-2 rounded-xl border border-red-100 text-sm font-semibold text-red-400 hover:bg-red-50 transition">
                 🗑 מחק
               </button>
             </div>
@@ -169,222 +135,189 @@ export default function CalendarPage() {
   // ── Day view ──────────────────────────────────────────────────────────
   if (dayView) {
     const dayEvents = eventsForDay(dayView)
-    const todayDay = isToday(dayView)
+    const col = COL[dayView.getDay()]
     return (
-      <div className="flex flex-col lg:flex-row gap-5">
-        <div className="flex-1">
-          <div className="bg-white/90 rounded-3xl shadow-md border border-rose-100 overflow-hidden">
-
-            {/* Day view header */}
-            <div className="bg-gradient-to-r from-rose-100 via-pink-50 to-violet-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
-              <button
-                onClick={() => setDayView(null)}
-                className="flex items-center gap-1.5 text-rose-500 hover:text-rose-700 font-semibold text-sm transition"
-              >
-                ← חזרה
-              </button>
-              <div className="flex items-center gap-2 min-w-0">
-                {todayDay && <span className="text-base">🌸</span>}
-                <h2 className="font-extrabold bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent text-sm sm:text-base truncate">
-                  {heDate(dayView)}
-                </h2>
-                {todayDay && <span className="text-xs bg-rose-100 text-rose-600 font-bold px-2 py-0.5 rounded-full">היום</span>}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => setDayView(subDays(dayView, 1))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-rose-100 text-rose-400 transition font-bold">‹</button>
-                <button onClick={() => setDayView(addDays(dayView, 1))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-violet-100 text-violet-400 transition font-bold">›</button>
-                <button
-                  onClick={() => { setSelectedDate(dayView); setShowModal(true) }}
-                  className="bg-gradient-to-r from-rose-400 to-violet-500 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full transition shadow-sm hover:from-rose-500 hover:to-violet-600"
-                >
-                  + הוסף
-                </button>
-              </div>
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ backgroundColor: col.header }}>
+            <button onClick={() => setDayView(null)}
+              className="text-sm font-bold flex items-center gap-1 hover:opacity-70 transition" style={{ color: col.text }}>
+              ← חזרה
+            </button>
+            <div className="text-center flex-1">
+              <p className="text-xs font-semibold opacity-60" style={{ color: col.text }}>יום {HE_DAYS[dayView.getDay()]}</p>
+              <p className="font-extrabold text-lg leading-tight" style={{ color: col.text, fontFamily: 'var(--font-heebo)' }}>
+                {dayView.getDate()} ב{HE_MONTHS[dayView.getMonth()]} {dayView.getFullYear()}
+              </p>
+              {isToday(dayView) && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/60" style={{ color: col.text }}>היום</span>}
             </div>
-
-            {/* Events list */}
-            <div className="p-4 sm:p-6 min-h-[300px]">
-              {dayEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <span className="text-5xl mb-3">🌷</span>
-                  <p className="text-gray-400 font-medium">אין אירועים ביום זה</p>
-                  <button
-                    onClick={() => { setSelectedDate(dayView); setShowModal(true) }}
-                    className="mt-4 text-sm text-rose-500 hover:text-rose-700 font-semibold transition underline underline-offset-2"
-                  >
-                    הוסף אירוע ראשון
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {dayEvents.map((ev) => {
-                    const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : detectEventCategory(ev.title)
-                    return (
-                      <div
-                        key={ev.id}
-                        onClick={() => setSelectedEvent(ev)}
-                        className="flex items-start gap-3 p-3 rounded-2xl cursor-pointer hover:shadow-sm transition-all border"
-                        style={{ backgroundColor: cat?.color + '33' || '#F9FAFB', borderColor: cat?.color + '66' || '#E5E7EB' }}
-                      >
-                        <div className="flex-shrink-0 text-xl mt-0.5">{cat?.emoji || '📅'}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 truncate" dir="auto">{ev.title}</p>
-                          <p className="text-xs mt-0.5" style={{ color: cat?.textColor || '#6B7280' }}>
-                            {ev.allDay
-                              ? 'כל היום'
-                              : `${format(parseISO(ev.startDate), 'HH:mm')} – ${format(parseISO(ev.endDate), 'HH:mm')}`}
-                          </p>
-                          {ev.description && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate" dir="auto">{ev.description}</p>
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 self-start mt-0.5"
-                          style={{ backgroundColor: cat?.color || '#E5E7EB', color: cat?.textColor || '#374151' }}>
-                          {cat?.label}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setDayView(subDays(dayView, 1))}
+                className="w-7 h-7 rounded-full bg-white/50 hover:bg-white/80 flex items-center justify-center font-bold transition" style={{ color: col.text }}>‹</button>
+              <button onClick={() => setDayView(addDays(dayView, 1))}
+                className="w-7 h-7 rounded-full bg-white/50 hover:bg-white/80 flex items-center justify-center font-bold transition" style={{ color: col.text }}>›</button>
+              <button onClick={() => { setSelectedDate(dayView); setShowModal(true) }}
+                className="text-xs font-bold px-3 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition">
+                + הוסף
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Sidebar — same as month view */}
-        <div className="w-full lg:w-72 space-y-4">
-          <div className="bg-white/90 rounded-3xl shadow-md border border-violet-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-violet-100 to-rose-100 px-4 py-3 flex items-center gap-2">
-              <span className="text-lg">🌺</span>
-              <h3 className="text-sm font-bold text-violet-700">בקרוב</h3>
-            </div>
-            <div className="p-4">
-              {upcomingEvents.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-2">אין אירועים קרובים</p>
-              ) : (
-                <div className="space-y-2">
-                  {upcomingEvents.map((ev) => {
-                    const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
-                    return (
-                      <div key={ev.id} onClick={() => setSelectedEvent(ev)}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-rose-50 rounded-2xl p-2 transition">
-                        <div className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
-                          style={{ backgroundColor: ev.color || '#E5E7EB' }} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {format(parseISO(ev.startDate), ev.allDay ? 'd/M' : 'd/M, HH:mm')}
-                          </p>
-                        </div>
+          {/* Events */}
+          <div className="p-5 min-h-64">
+            {dayEvents.length === 0 ? (
+              <div className="flex flex-col items-center py-14 text-center">
+                <span className="text-4xl mb-3">✨</span>
+                <p className="text-gray-400 font-medium text-sm">אין אירועים ביום זה</p>
+                <button onClick={() => { setSelectedDate(dayView); setShowModal(true) }}
+                  className="mt-3 text-sm font-semibold underline underline-offset-2 text-gray-500 hover:text-gray-800 transition">
+                  הוסף אירוע
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dayEvents.map(ev => {
+                  const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : detectEventCategory(ev.title)
+                  return (
+                    <div key={ev.id} onClick={() => setSelectedEvent(ev)}
+                      className="flex gap-3 p-3 rounded-xl cursor-pointer hover:shadow-sm transition border"
+                      style={{ borderColor: (ev.color || '#E5E7EB') + '99', backgroundColor: (ev.color || '#F9FAFB') + '33' }}>
+                      <div className="text-xl flex-shrink-0">{cat?.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm" dir="auto">{ev.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {ev.allDay ? 'כל היום' : `${format(parseISO(ev.startDate),'HH:mm')} – ${format(parseISO(ev.endDate),'HH:mm')}`}
+                        </p>
+                        {ev.description && <p className="text-xs text-gray-400 truncate mt-0.5" dir="auto">{ev.description}</p>}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+                      <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: cat?.color || '#E5E7EB', color: cat?.textColor || '#374151' }}>
+                        {cat?.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
         {showModal && <AddEventModal defaultDate={selectedDate} onClose={() => setShowModal(false)} onCreated={fetchEvents} />}
         {editingEvent && <AddEventModal editEvent={editingEvent} onClose={() => setEditingEvent(null)} onCreated={fetchEvents} />}
-        {eventDetailPopup}
+        {eventDetail}
       </div>
     )
   }
 
-  // ── Month view ────────────────────────────────────────────────────────
+  // ── Month view ─────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col lg:flex-row gap-5">
+      <div className="flex-1 min-w-0">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-      {/* Calendar */}
-      <div className="flex-1">
-        <div className="bg-white/90 rounded-3xl shadow-md border border-rose-100 overflow-hidden">
-
-          {/* Header */}
-          <div className="bg-gradient-to-r from-rose-100 via-pink-50 to-violet-100 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-              <span className="text-lg sm:text-2xl">🌸</span>
-              <h2 className="text-sm sm:text-xl font-extrabold bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent truncate">
-                {HE_MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </h2>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <button onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-rose-100 text-rose-400 transition font-bold">‹</button>
-              <button onClick={() => setCurrentDate(new Date())}
-                className="px-2 sm:px-3 py-1 text-xs font-semibold rounded-full bg-white/80 text-rose-500 hover:bg-rose-50 border border-rose-200 transition">
-                היום
-              </button>
-              <button onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-violet-100 text-violet-400 transition font-bold">›</button>
+          {/* ── Planner title ── */}
+          <div className="px-4 sm:px-6 pt-5 pb-3 border-b border-gray-100">
+            <div className="flex items-end justify-between gap-3 flex-wrap">
+              <div className="flex items-end gap-2 leading-none">
+                <span style={{ fontFamily: 'var(--font-bebas)' }}
+                  className="text-4xl sm:text-5xl tracking-widest text-gray-900 leading-none">
+                  FAMILY
+                </span>
+                <span style={{ fontFamily: 'var(--font-dancing)' }}
+                  className="text-3xl sm:text-4xl text-rose-400 leading-none pb-1">
+                  Planner
+                </span>
+              </div>
               <button
                 onClick={() => { setSelectedDate(undefined); setShowModal(true) }}
-                className="bg-gradient-to-r from-rose-400 to-violet-500 hover:from-rose-500 hover:to-violet-600 text-white text-xs sm:text-sm font-bold px-2.5 sm:px-4 py-1.5 rounded-full transition shadow-sm"
-              >
+                className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-bold px-4 py-2 rounded-full transition shadow-sm">
                 + אירוע
               </button>
             </div>
+
+            {/* Month strip */}
+            <div className="flex gap-1 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+              {HE_MONTHS.map((m, i) => {
+                const active = i === currentDate.getMonth()
+                return (
+                  <button key={m}
+                    onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), i, 1))}
+                    className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-bold transition ${
+                      active ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                    }`}>
+                    {m.slice(0, 3)}
+                  </button>
+                )
+              })}
+              <div className="flex-shrink-0 flex items-center gap-1 mr-2">
+                <button onClick={() => setCurrentDate(c => subMonths(c, 1))}
+                  className="w-6 h-6 rounded-full hover:bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-sm">‹</button>
+                <button onClick={() => setCurrentDate(c => addMonths(c, 1))}
+                  className="w-6 h-6 rounded-full hover:bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-sm">›</button>
+              </div>
+            </div>
           </div>
 
-          {/* Day headers */}
-          <div className="grid grid-cols-7 bg-gradient-to-r from-rose-50 via-pink-50 to-violet-50 border-b border-rose-100">
-            {DAY_HEADERS.map((d) => (
-              <div key={d.label} className={`py-2 text-center text-xs font-bold tracking-wide ${d.color}`}>{d.label}</div>
+          {/* ── Day-of-week headers ── */}
+          <div className="grid grid-cols-7">
+            {COL.map(c => (
+              <div key={c.label}
+                className="py-2 sm:py-3 text-center text-xs sm:text-sm font-extrabold tracking-wide border-b border-gray-100"
+                style={{ backgroundColor: c.header, color: c.text }}>
+                {c.label}
+              </div>
             ))}
           </div>
 
-          {/* Days grid */}
-          <div className="grid grid-cols-7">
-            {days.map((day) => {
+          {/* ── Days grid ── */}
+          <div className="grid grid-cols-7 divide-x divide-gray-100">
+            {days.map(day => {
+              const col = COL[day.getDay()]
               const dayEvents = eventsForDay(day)
-              const isCurrentMonth = isSameMonth(day, currentDate)
+              const inMonth = isSameMonth(day, currentDate)
               const todayDay = isToday(day)
               return (
-                <div
-                  key={day.toISOString()}
+                <div key={day.toISOString()}
                   onClick={() => setDayView(day)}
-                  className={`min-h-[52px] sm:min-h-[88px] p-1 sm:p-1.5 border-b border-r border-rose-50 cursor-pointer transition-colors ${
-                    !isCurrentMonth ? 'opacity-30' : 'hover:bg-rose-50/40'
+                  className={`min-h-[56px] sm:min-h-[100px] p-1 sm:p-1.5 border-b border-gray-100 cursor-pointer transition-colors relative ${
+                    !inMonth ? 'opacity-25' : ''
                   }`}
-                >
+                  style={{ backgroundColor: inMonth ? col.bg + '55' : undefined }}>
+
                   {/* Day number */}
-                  <div className={`w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold mb-0.5 transition-all ${
-                    todayDay
-                      ? 'bg-gradient-to-br from-rose-400 to-violet-500 text-white shadow-sm'
-                      : 'text-gray-600'
-                  }`}>
+                  <div className={`w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-xs sm:text-sm font-extrabold mb-0.5 ${
+                    todayDay ? 'text-white' : ''
+                  }`}
+                    style={todayDay ? { backgroundColor: col.text, fontFamily: 'var(--font-heebo)' } : { color: col.text, fontFamily: 'var(--font-heebo)' }}>
                     {format(day, 'd')}
                   </div>
 
-                  {/* Mobile: colored dots */}
+                  {/* Mobile: dots */}
                   {dayEvents.length > 0 && (
-                    <div className="flex flex-wrap gap-0.5 sm:hidden mt-0.5">
-                      {dayEvents.slice(0, 3).map((ev) => (
-                        <div key={ev.id} className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: ev.color || '#9CA3AF' }} />
+                    <div className="flex flex-wrap gap-0.5 sm:hidden">
+                      {dayEvents.slice(0, 3).map(ev => (
+                        <div key={ev.id} className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: ev.color || col.header }} />
                       ))}
                     </div>
                   )}
 
                   {/* Desktop: event chips */}
                   <div className="hidden sm:block space-y-0.5">
-                    {dayEvents.slice(0, 2).map((ev) => {
+                    {dayEvents.slice(0, 3).map(ev => {
                       const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
-                      const bg = ev.color || '#E5E7EB'
-                      const fg = cat?.textColor || '#374151'
                       return (
-                        <div
-                          key={ev.id}
-                          onClick={(e) => { e.stopPropagation(); setSelectedEvent(ev) }}
-                          className="text-[10px] truncate rounded-full px-1.5 py-0.5 font-semibold cursor-pointer hover:opacity-80 transition"
-                          style={{ backgroundColor: bg, color: fg }}
-                        >
+                        <div key={ev.id}
+                          onClick={e => { e.stopPropagation(); setSelectedEvent(ev) }}
+                          className="text-[10px] leading-snug px-1.5 py-0.5 rounded font-semibold truncate cursor-pointer hover:opacity-80 transition"
+                          style={{ backgroundColor: ev.color || col.header, color: cat?.textColor || col.text }}>
                           {cat?.emoji} {ev.title}
                         </div>
                       )
                     })}
-                    {dayEvents.length > 2 && (
-                      <div className="text-[10px] text-rose-400 px-1 font-medium">+{dayEvents.length - 2} עוד</div>
+                    {dayEvents.length > 3 && (
+                      <p className="text-[9px] font-bold pl-1" style={{ color: col.text }}>+{dayEvents.length - 3} עוד</p>
                     )}
                   </div>
                 </div>
@@ -394,38 +327,29 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Sidebar — hidden on mobile, visible lg+ */}
-      <div className="hidden lg:block w-72 space-y-4">
-        <div className="bg-white/90 rounded-3xl shadow-md border border-violet-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-violet-100 to-rose-100 px-4 py-3 flex items-center gap-2">
-            <span className="text-lg">🌺</span>
-            <h3 className="text-sm font-bold text-violet-700">בקרוב</h3>
+      {/* ── Sidebar ── */}
+      <div className="hidden lg:block w-64 space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p style={{ fontFamily: 'var(--font-dancing)' }} className="text-xl text-gray-700">בקרוב ✨</p>
           </div>
           <div className="p-4">
             {upcomingEvents.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-2">אין אירועים קרובים</p>
+              <p className="text-sm text-gray-400 text-center py-3">אין אירועים קרובים</p>
             ) : (
-              <div className="space-y-2">
-                {upcomingEvents.map((ev) => {
+              <div className="space-y-1">
+                {upcomingEvents.map(ev => {
                   const cat = ev.color ? EVENT_CATEGORIES.find(c => c.color === ev.color) : null
                   return (
                     <div key={ev.id} onClick={() => setSelectedEvent(ev)}
-                      className="flex items-start gap-2 cursor-pointer hover:bg-rose-50 rounded-2xl p-2 transition">
-                      <div className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
-                        style={{ backgroundColor: ev.color || '#E5E7EB' }} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{ev.title}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <p className="text-xs text-gray-400">
-                            {format(parseISO(ev.startDate), ev.allDay ? 'd/M' : 'd/M, HH:mm')}
-                          </p>
-                          {cat && (
-                            <span className="text-[10px] px-1.5 rounded-full font-semibold"
-                              style={{ backgroundColor: cat.color, color: cat.textColor }}>
-                              {cat.emoji} {cat.label}
-                            </span>
-                          )}
-                        </div>
+                      className="flex items-start gap-2.5 cursor-pointer hover:bg-gray-50 rounded-xl p-2 transition">
+                      <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                        style={{ backgroundColor: ev.color || '#9CA3AF' }} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate" dir="auto">{ev.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {cat?.emoji} {format(parseISO(ev.startDate), ev.allDay ? 'd/M' : 'd/M, HH:mm')}
+                        </p>
                       </div>
                     </div>
                   )
@@ -434,11 +358,19 @@ export default function CalendarPage() {
             )}
           </div>
         </div>
+
+        {/* Quote card */}
+        <div className="rounded-2xl p-4 border border-yellow-100" style={{ backgroundColor: '#FFFDE7' }}>
+          <p style={{ fontFamily: 'var(--font-dancing)' }} className="text-base text-yellow-700 leading-relaxed text-center">
+            &ldquo;You&apos;re doing better than you think. Keep showing up.&rdquo;
+          </p>
+          <p className="text-yellow-400 text-center mt-2 text-lg">💛</p>
+        </div>
       </div>
 
       {showModal && <AddEventModal defaultDate={selectedDate} onClose={() => setShowModal(false)} onCreated={fetchEvents} />}
       {editingEvent && <AddEventModal editEvent={editingEvent} onClose={() => setEditingEvent(null)} onCreated={fetchEvents} />}
-      {eventDetailPopup}
+      {eventDetail}
     </div>
   )
 }

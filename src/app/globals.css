@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist);
+  --font-sans: var(--font-heebo), var(--font-geist);
+  --font-bebas: var(--font-bebas);
+  --font-dancing: var(--font-dancing);
 }

@@ -83,24 +83,26 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-md border border-gray-100" onClick={(e) => e.stopPropagation()}>
 
         {/* Modal header */}
-        <div className="bg-gradient-to-r from-rose-100 via-pink-50 to-violet-100 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{editEvent ? '✏️' : '🌷'}</span>
-            <h2 className="text-base font-extrabold bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
-              {editEvent ? 'ערוך אירוע' : 'הוסף אירוע'}
-            </h2>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-end gap-2">
+            <span style={{ fontFamily: 'var(--font-bebas)' }} className="text-2xl tracking-widest text-gray-900 leading-none">
+              {editEvent ? 'EDIT' : 'NEW'}
+            </span>
+            <span style={{ fontFamily: 'var(--font-dancing)' }} className="text-xl text-rose-400 leading-none pb-0.5">
+              {editEvent ? 'אירוע' : 'אירוע'}
+            </span>
           </div>
-          <button onClick={onClose} className="text-rose-400 hover:text-rose-600 text-xl leading-none transition">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none transition">×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-xs font-semibold text-violet-700 mb-1 uppercase tracking-wide">שם האירוע</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">שם האירוע</label>
             <input
               value={title}
               onChange={(e) => { setTitle(e.target.value); setManualCategoryId(null) }}
@@ -124,7 +126,7 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
 
           {/* Category selector */}
           <div>
-            <label className="block text-xs font-semibold text-violet-700 mb-2 uppercase tracking-wide">קטגוריה</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">קטגוריה</label>
             <div className="flex flex-wrap gap-1.5">
               {EVENT_CATEGORIES.map((cat) => {
                 const isActive = activeCategory?.id === cat.id
@@ -149,7 +151,7 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-violet-700 mb-1 uppercase tracking-wide">תיאור</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">תיאור</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -175,7 +177,7 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-violet-700 mb-1 uppercase tracking-wide">התחלה</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">התחלה</label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 value={allDay ? startDate.slice(0, 10) : startDate}
@@ -185,7 +187,7 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-violet-700 mb-1 uppercase tracking-wide">סיום</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">סיום</label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 value={allDay ? endDate.slice(0, 10) : endDate}
@@ -198,7 +200,7 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
 
           {/* Recurring */}
           <div>
-            <label className="block text-xs font-semibold text-violet-700 mb-1 uppercase tracking-wide">חזרה</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">חזרה</label>
             <select
               value={recurring}
               onChange={(e) => setRecurring(e.target.value)}
@@ -217,14 +219,14 @@ export default function AddEventModal({ defaultDate, editEvent, onClose, onCreat
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 border border-rose-200 rounded-2xl py-2 text-sm font-semibold text-gray-500 hover:bg-rose-50 transition"
+              className="flex-1 border border-gray-200 rounded-xl py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition"
             >
               ביטול
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-2xl py-2 text-sm font-bold transition disabled:opacity-60 bg-gradient-to-r from-rose-400 to-violet-500 text-white hover:from-rose-500 hover:to-violet-600 shadow-sm"
+              className="flex-1 rounded-xl py-2 text-sm font-bold transition disabled:opacity-60 bg-gray-900 text-white hover:bg-gray-700 shadow-sm"
             >
               {loading ? 'שומר...' : editEvent ? 'שמור שינויים' : '🌷 הוסף אירוע'}
             </button>
